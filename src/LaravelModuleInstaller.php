@@ -30,7 +30,7 @@ class LaravelModuleInstaller extends LibraryInstaller
     public function getInstallPath(PackageInterface $package): string
     {
         return implode('/', [
-            $this->getBaseInstallationPath($package),
+            $this->getBaseInstallationPath(),
             $this->getModuleName($package),
         ]);
     }
@@ -39,13 +39,15 @@ class LaravelModuleInstaller extends LibraryInstaller
      * Get the base path that the module should be installed into.
      * Defaults to Modules/ and can be overridden in the module's composer.json.
      *
-     * @param PackageInterface $package
      * @return string
      */
-    protected function getBaseInstallationPath(PackageInterface $package): string
+    protected function getBaseInstallationPath(): string
     {
-        if (($extra = $package->getExtra()) && !empty($extra['module-dir'])) {
-            return $extra['module-dir'];
+        if ($this->composer
+            && $this->composer->getPackage()
+            && ($extra = $this->composer->getPackage()->getExtra())
+        ) {
+            return $extra['laravel-modules']['module-dir'] ?? self::DEFAULT_MODULE_DIR;
         }
 
         return self::DEFAULT_MODULE_DIR;
