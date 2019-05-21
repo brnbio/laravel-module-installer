@@ -45,7 +45,9 @@ class LaravelModuleInstallerTest extends TestCase
                 'getDownloadManager' => $this->composer,
                 'getConfig' => $this->composer,
                 'get' => $this->composer,
-            ]);
+            ])
+            ->shouldReceive('getExtra')
+            ->byDefault();
 
         $this->laravelModuleInstaller = new LaravelModuleInstaller($this->io, $this->composer);
     }
@@ -88,9 +90,15 @@ class LaravelModuleInstallerTest extends TestCase
     public function testCustomModuleDir(): void
     {
         /** @var PackageInterface $package */
-        $package = Mockery::mock(PackageInterface::class);
-        $package->shouldReceive('getPrettyName')->andReturn('vendor/name');
-        $package->shouldReceive('getExtra')->andReturn(['module-dir' => 'Custom']);
+        $package = $this->getMockPackage('vendor/name');
+        $this->composer
+            ->shouldReceive('getExtra')
+            ->andReturn([
+                'laravel-modules' => [
+                    'module-dir' => 'Custom'
+                ]
+            ])
+            ->getMock();
 
         $this->assertEquals('Custom/name', $this->laravelModuleInstaller->getInstallPath($package));
     }
