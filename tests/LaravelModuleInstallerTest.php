@@ -1,130 +1,110 @@
 <?php
 
-use PHPUnit\Framework\TestCase;
+declare(strict_types=1);
 
+use Brnbio\LaravelModuleInstaller\LaravelModuleInstaller;
 use Composer\Composer;
 use Composer\IO\IOInterface;
 use Composer\Package\PackageInterface;
-use Joshbrw\LaravelModuleInstaller\LaravelModuleInstaller;
+use PHPUnit\Framework\TestCase;
+use Mockery\MockInterface;
 
+/**
+ * Class LaravelModuleInstallerTest
+ */
 class LaravelModuleInstallerTest extends TestCase
 {
+    /**
+     * @var IOInterface
+     */
     protected $io;
-    protected $composer;
-    protected $config;
-    protected $test;
 
-    public function setUp()
+    /**
+     * @var Composer
+     */
+    protected $composer;
+
+    /**
+     * @var LaravelModuleInstaller
+     */
+    protected $laravelModuleInstaller;
+
+    /**
+     * @return void
+     */
+    public function setUp(): void
     {
         $this->io = Mockery::mock(IOInterface::class);
         $this->composer = Mockery::mock(Composer::class);
-        $this->composer->allows([
-            'getPackage' => $this->composer,
-            'getDownloadManager' => $this->composer,
-            'getConfig' => $this->composer,
-            'get' => $this->composer,
-        ])->shouldReceive('getExtra')->byDefault();
+        $package = Mockery::mock(PackageInterface::class);
+        $package->shouldReceive('getExtra')->andReturn([]);
 
-        $this->test = new LaravelModuleInstaller(
-            $this->io, $this->composer
-        );
+        $this->composer
+            ->allows([
+                'getPackage' => $this->composer,
+                'getDownloadManager' => $this->composer,
+                'getConfig' => $this->composer,
+                'get' => $this->composer,
+            ]);
+
+        $this->laravelModuleInstaller = new LaravelModuleInstaller($this->io, $this->composer);
     }
 
     /**
-     * @test
-     *
      * Your package composer.json file must include:
+     * "type": "laravel-module",
      *
-     *    "type": "laravel-module",
+     * @return void
      */
-    public function it_supports_laravel_module_type_only()
+    public function testSupport(): void
     {
-        $this->assertFalse($this->test->supports('module'));
-        $this->assertTrue($this->test->supports('laravel-module'));
+        $this->assertFalse($this->laravelModuleInstaller->supports('module'));
+        $this->assertTrue($this->laravelModuleInstaller->supports('laravel-module'));
     }
 
     /**
-     * @test
-     * @expectedException \Exception
+     * @return void
+     * @throws Exception
      */
-    public function it_throws_exception_if_given_malformed_name()
+    public function testPackageName(): void
     {
-        $mock = $this->getMockPackage('vendor');
+        /** @var PackageInterface $package */
+        $package = $this->getMockPackage('vendor');
+        $this->assertEquals('Modules/vendor', $this->laravelModuleInstaller->getInstallPath($package));
 
-        $this->test->getInstallPath($mock);
-    }
+        /** @var PackageInterface $package */
+        $package = $this->getMockPackage('vendor/name');
+        $this->assertEquals('Modules/name', $this->laravelModuleInstaller->getInstallPath($package));
 
-    /**
-     * @test
-     * @expectedException \Exception
-     */
-    public function it_throws_exception_if_suffix_not_included()
-    {
-        $mock = $this->getMockPackage('vendor/name');
-
-        $this->test->getInstallPath($mock);
-    }
-
-    /**
-     * @test
-     */
-    public function it_returns_modules_folder_by_default()
-    {
-        $mock = $this->getMockPackage('vendor/name-module');
-
-        $this->assertEquals('Modules/Name', $this->test->getInstallPath($mock));
-    }
-
-    /**
-     * @test
-     * @expectedException \Exception
-     */
-    public function it_throws_exception_if_given_malformed_compound_name()
-    {
-        $mock = $this->getMockPackage('vendor/some-compound-name');
-
-        $this->assertEquals('Modules/Name', $this->test->getInstallPath($mock));
-    }
-
-    /**
-     * @test
-     */
-    public function it_can_use_compound_module_names()
-    {
-        $mock = $this->getMockPackage('vendor/compound-name-module');
-
-        $this->assertEquals('Modules/CompoundName', $this->test->getInstallPath($mock));
-    }
-
-    /**
-     * @test
-     *
-     * You can optionally include a base path name
-     * in which to install.
-     *
-     *    "extra": {
-     *      "module-dir": "Custom"
-     *    },
-     */
-    public function it_can_use_custom_path()
-    {
+        /** @var PackageInterface $package */
         $package = $this->getMockPackage('vendor/name-module');
-
-        $this->composer->shouldReceive('getExtra')
-            ->andReturn(['module-dir' => 'Custom'])
-            ->getMock();
-
-        $this->assertEquals('Custom/Name', $this->test->getInstallPath($package));
+        $this->assertEquals('Modules/name', $this->laravelModuleInstaller->getInstallPath($package));
     }
 
-
-    private function getMockPackage($return)
+    /**
+     * @return void
+     * @throws Exception
+     */
+    public function testCustomModuleDir(): void
     {
-        return Mockery::mock(PackageInterface::class)
-            ->shouldReceive('getPrettyName')
-            ->once()
-            ->andReturn($return)
-            ->getMock();
+        /** @var PackageInterface $package */
+        $package = Mockery::mock(PackageInterface::class);
+        $package->shouldReceive('getPrettyName')->andReturn('vendor/name');
+        $package->shouldReceive('getExtra')->andReturn(['module-dir' => 'Custom']);
+
+        $this->assertEquals('Custom/name', $this->laravelModuleInstaller->getInstallPath($package));
     }
 
+    /**
+     * @param string $packageName
+     * @return MockInterface
+     */
+    public function getMockPackage(string $packageName): MockInterface
+    {
+        $package = Mockery::mock(PackageInterface::class);
+        $package->shouldReceive('getPrettyName')->andReturn($packageName);
+        $package->shouldReceive('getExtra')->andReturn(null);
+
+        return $package;
+    }
 }
