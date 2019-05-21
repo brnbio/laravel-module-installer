@@ -1,14 +1,14 @@
 {
-    "name": "joshbrw/laravel-module-installer",
+    "name": "brnbio/laravel-module-installer",
     "type": "composer-plugin",
     "license": "MIT",
     "autoload": {
         "psr-4": {
-            "Joshbrw\\LaravelModuleInstaller\\": "src/"
+            "Brnbio\\LaravelModuleInstaller\\": "src/"
         }
     },
     "extra": {
-        "class": "Joshbrw\\LaravelModuleInstaller\\LaravelModuleInstallerPlugin"
+        "class": "Brnbio\\LaravelModuleInstaller\\LaravelModuleInstallerPlugin"
     },
     "require-dev": {
         "composer/composer": "^1.3",
@@ -17,6 +17,6 @@
     },
     "require": {
         "composer-plugin-api": "^1.1",
-        "php": "^5.4|7.*"
+        "php": "^7.1"
     }
 }

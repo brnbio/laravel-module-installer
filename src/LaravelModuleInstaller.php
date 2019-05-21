@@ -1,86 +1,72 @@
 <?php
 
-namespace Joshbrw\LaravelModuleInstaller;
+declare(strict_types=1);
 
-use Composer\Composer;
-use Composer\IO\IOInterface;
+namespace Brnbio\LaravelModuleInstaller;
+
 use Composer\Package\PackageInterface;
 use Composer\Installer\LibraryInstaller;
+use Exception;
 
+/**
+ * Class LaravelModuleInstaller
+ * @package Brnbio\LaravelModuleInstaller
+ */
 class LaravelModuleInstaller extends LibraryInstaller
 {
-    const DEFAULT_ROOT = "Modules";
+    /**
+     * Default module installation dir
+     * @var string
+     */
+    public const DEFAULT_MODULE_DIR = "Modules";
 
     /**
      * Get the fully-qualified install path
-     * {@inheritDoc}
+     *
+     * @param PackageInterface $package
+     * @return string
+     * @throws Exception
      */
-    public function getInstallPath(PackageInterface $package)
+    public function getInstallPath(PackageInterface $package): string
     {
-        return $this->getBaseInstallationPath() . '/' . $this->getModuleName($package);
+        return implode('/', [
+            $this->getBaseInstallationPath($package),
+            $this->getModuleName($package),
+        ]);
     }
 
     /**
      * Get the base path that the module should be installed into.
      * Defaults to Modules/ and can be overridden in the module's composer.json.
-     * @return string
-     */
-    protected function getBaseInstallationPath()
-    {
-        if (!$this->composer || !$this->composer->getPackage()) {
-            return self::DEFAULT_ROOT;
-        }
-
-        $extra = $this->composer->getPackage()->getExtra();
-
-        if (!$extra || empty($extra['module-dir'])) {
-            return self::DEFAULT_ROOT;
-        }
-
-        return $extra['module-dir'];
-    }
-
-    /**
-     * Get the module name, i.e. "joshbrw/something-module" will be transformed into "Something"
+     *
      * @param PackageInterface $package
      * @return string
-     * @throws \Exception
      */
-    protected function getModuleName(PackageInterface $package)
+    protected function getBaseInstallationPath(PackageInterface $package): string
     {
-        $name = $package->getPrettyName();
-        $split = explode("/", $name);
-
-        if (count($split) !== 2) {
-            throw new \Exception($this->usage());
+        if (($extra = $package->getExtra()) && !empty($extra['module-dir'])) {
+            return $extra['module-dir'];
         }
 
-        $splitNameToUse = explode("-", $split[1]);
-
-        if (count($splitNameToUse) < 2) {
-            throw new \Exception($this->usage());
-        }
-
-        if (array_pop($splitNameToUse) !== 'module') {
-            throw new \Exception($this->usage());
-        }
-
-        return implode('',array_map('ucfirst', $splitNameToUse));
+        return self::DEFAULT_MODULE_DIR;
     }
 
     /**
-     * Get the usage instructions
+     * @param PackageInterface $package
      * @return string
      */
-    protected function usage()
+    protected function getModuleName(PackageInterface $package): string
     {
-        return "Ensure your package's name is in the format <vendor>/<name>-<module>";
+        $module = explode('/', $package->getPrettyName());
+
+        return str_replace('-module', '', array_pop($module));
     }
 
     /**
-     * {@inheritDoc}
+     * @param $packageType
+     * @return bool
      */
-    public function supports($packageType)
+    public function supports($packageType): bool
     {
         return 'laravel-module' === $packageType;
     }
